@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraGeminiAI Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-mesh"></div>
+    
+    <div class="container">
+        <header>
+            <h1>UltraGemini<span>AI</span></h1>
+            <p>Control Panel & Orchestrator</p>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Coluna Esquerda: Configurações -->
+            <aside class="settings-panel glass-panel">
+                <h2>System Engine</h2>
+                <div class="status-indicator">
+                    <span class="dot online"></span>
+                    <span id="engine-status">Engine Online</span>
+                </div>
+
+                <div class="profile-section">
+                    <h3>Active Profile</h3>
+                    <div class="select-wrapper">
+                        <select id="profile-selector">
+                            <option value="loading">Carregando...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="new-profile-box">
+                        <input type="text" id="new-profile-name" placeholder="Ex: chrome_profile_canal">
+                        <button id="btn-create-profile" class="btn-primary">Criar / Trocar</button>
+                    </div>
+                    <p class="helper-text">Mudar de perfil reinicia o navegador localmente.</p>
+                </div>
+            </aside>
+
+            <!-- Coluna Direita: Playground -->
+            <main class="playground-panel glass-panel">
+                <h2>API Playground</h2>
+                
+                <div class="route-selector">
+                    <label class="radio-label">
+                        <input type="radio" name="route" value="ask" checked>
+                        <div class="radio-card">
+                            <h4>/ask (Stateless)</h4>
+                            <span>Tiro único, reseta contexto.</span>
+                        </div>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="route" value="chat">
+                        <div class="radio-card">
+                            <h4>/chat (Stateful)</h4>
+                            <span>Roteiros e cadeias.</span>
+                        </div>
+                    </label>
+                </div>
+
+                <textarea id="prompt-input" placeholder="Digite seu prompt colossal aqui..."></textarea>
+                
+                <button id="btn-send-prompt" class="btn-action">
+                    <span>Enviar Prompt</span>
+                    <div class="spinner hidden"></div>
+                </button>
+
+                <div class="response-box">
+                    <h3>Resposta da IA</h3>
+                    <pre id="response-output">Aguardando comando...</pre>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
