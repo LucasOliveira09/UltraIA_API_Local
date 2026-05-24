@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import asyncio
-from UltraIA_API.gemini_scraper import GeminiScraper
+from gemini_scraper import GeminiScraper
 from contextlib import asynccontextmanager
 import sys
 import os
