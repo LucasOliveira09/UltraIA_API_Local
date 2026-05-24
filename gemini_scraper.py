@@ -42,7 +42,7 @@ class GeminiScraper:
         self.page = pages[0] if pages else await self.browser_context.new_page()
         
         print("Navegando para o Gemini...")
-        await self.page.goto("https://gemini.google.com/app", wait_until="networkidle")
+        await self.page.goto("https://gemini.google.com/app", wait_until="domcontentloaded")
         
         print("Aguardando input do chat aparecer (timeout de 15s)...")
         # Espera o input de chat carregar por 15 segundos para não travar a API
@@ -65,11 +65,16 @@ class GeminiScraper:
                     
                     # Procura e clica na opção 'Advanced' ou 'Pro' no menu suspenso
                     advanced_option = self.page.locator('menuitem, li, div[role="option"], div[role="menuitem"]').filter(has_text="Advanced").first
+                    pro_option = self.page.locator('menuitem, li, div[role="option"], div[role="menuitem"]').filter(has_text="Pro").first
+                    
                     if await advanced_option.is_visible():
                         await advanced_option.click(timeout=3000)
                         print("Gemini Advanced selecionado com sucesso!")
+                    elif await pro_option.is_visible():
+                        await pro_option.click(timeout=3000)
+                        print("Gemini Pro selecionado com sucesso!")
                     else:
-                        print("Não foi possível encontrar a opção 'Advanced' no menu. Verifique se a conta tem assinatura Pro.")
+                        print("Não foi possível encontrar a opção 'Advanced' ou 'Pro' no menu. Verifique se a conta tem assinatura ativa.")
                         await self.page.keyboard.press("Escape")
                 else:
                     print("Botão 'Flash' não encontrado. Presumindo que já está no 'Advanced' ou a UI não o exibe.")
@@ -106,7 +111,7 @@ class GeminiScraper:
         page = pages[0] if pages else await context.new_page()
         
         print("Navegando para o Gemini para login manual...")
-        await page.goto("https://gemini.google.com/app", wait_until="networkidle")
+        await page.goto("https://gemini.google.com/app", wait_until="domcontentloaded")
         
         print("Janela de login aberta. Faça o login. Feche a janela quando terminar.")
         try:
@@ -134,13 +139,16 @@ class GeminiScraper:
         await self.initialize(profile_name=new_profile_name)
 
     async def ask_gemini(self, prompt: str, is_stateless: bool = True) -> str:
+        if not getattr(self, 'is_logged_in', False):
+            return "Erro: O perfil atual não está logado no Gemini ou a página não carregou. Por favor, selecione o perfil e clique em 'Fazer Login (Abrir Chrome)'."
+            
         input_selector = 'div[contenteditable="true"]'
         
         if is_stateless:
             self.request_count += 1
             if self.request_count >= 20:
                 print("Reciclando a aba do Gemini para aliviar a memória (limite de 20 requisições atingido)...")
-                await self.page.goto("https://gemini.google.com/app", wait_until="networkidle")
+                await self.page.goto("https://gemini.google.com/app", wait_until="domcontentloaded")
                 await self.page.wait_for_selector(input_selector, timeout=60000)
                 self.request_count = 0
                 

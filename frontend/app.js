@@ -71,13 +71,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     btnCreateProfile.addEventListener("click", async () => {
-        let newName = newProfileInput.value.trim();
-        if (!newName) return;
+        const rawName = newProfileInput.value.trim();
+        if (!rawName) return;
         
-        // Garante que o nome tenha o prefixo correto para ser reconhecido pelo backend
-        if (!newName.startsWith("chrome_profile")) {
-            newName = "chrome_profile_" + newName;
-        }
+        // Garante que o perfil tenha o prefixo correto para ser listado pela API
+        const newName = rawName.startsWith("chrome_profile") ? rawName : "chrome_profile_" + rawName;
         
         btnCreateProfile.disabled = true;
         btnCreateProfile.textContent = "Criando...";
