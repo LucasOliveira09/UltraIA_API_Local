@@ -2,6 +2,10 @@ import os
 import asyncio
 from playwright.async_api import async_playwright, BrowserContext, Page
 
+class LimitReachedException(Exception):
+    """Exceção customizada lançada quando a conta atinge o limite do Gemini Advanced."""
+    pass
+
 class GeminiScraper:
     def __init__(self):
         self.playwright = None
@@ -10,8 +14,9 @@ class GeminiScraper:
         self.profile_name = "chrome_profile"
         self.user_data_dir = os.path.join(os.getcwd(), self.profile_name)
         self.request_count = 0
+        self.is_logged_in = False
 
-    async def initialize(self, profile_name: str = None):
+    async def initialize(self, profile_name: str = None, headless: bool = True):
         if profile_name:
             self.profile_name = profile_name
             self.user_data_dir = os.path.join(os.getcwd(), self.profile_name)
@@ -19,10 +24,10 @@ class GeminiScraper:
         if not self.playwright:
             self.playwright = await async_playwright().start()
         
-        print("Iniciando navegador com perfil local (na pasta chrome_profile)...")
+        print(f"Iniciando navegador com perfil local ({self.profile_name}) no modo Headless={headless}...")
         self.browser_context = await self.playwright.chromium.launch_persistent_context(
             user_data_dir=self.user_data_dir,
-            headless=False, # Precisa ser False para permitir o login manual
+            headless=headless,
             channel="chrome",
             args=[
                 "--no-sandbox", 
@@ -39,13 +44,79 @@ class GeminiScraper:
         print("Navegando para o Gemini...")
         await self.page.goto("https://gemini.google.com/app", wait_until="networkidle")
         
-        print("Aguardando você logar (se necessário) e o input do chat aparecer...")
-        # Espera o input de chat carregar por 5 minutos para dar tempo de você fazer login manualmente
+        print("Aguardando input do chat aparecer (timeout de 15s)...")
+        # Espera o input de chat carregar por 15 segundos para não travar a API
         try:
-            await self.page.wait_for_selector('div[contenteditable="true"]', timeout=300000)
+            await self.page.wait_for_selector('div[contenteditable="true"]', timeout=15000)
+            self.is_logged_in = True
             print("Login detectado e Gemini pronto para uso!")
+            
+            # Tenta selecionar o Gemini Advanced
+            try:
+                print("Verificando qual modelo está selecionado...")
+                
+                # Procura pelo botão que contém a palavra "Flash" perto do prompt
+                flash_btn = self.page.locator('button').filter(has_text="Flash").first
+                
+                if await flash_btn.is_visible():
+                    print("Modelo 'Flash' detectado! Tentando mudar para 'Advanced'...")
+                    await flash_btn.click(timeout=5000)
+                    await asyncio.sleep(1)
+                    
+                    # Procura e clica na opção 'Advanced' ou 'Pro' no menu suspenso
+                    advanced_option = self.page.locator('menuitem, li, div[role="option"], div[role="menuitem"]').filter(has_text="Advanced").first
+                    if await advanced_option.is_visible():
+                        await advanced_option.click(timeout=3000)
+                        print("Gemini Advanced selecionado com sucesso!")
+                    else:
+                        print("Não foi possível encontrar a opção 'Advanced' no menu. Verifique se a conta tem assinatura Pro.")
+                        await self.page.keyboard.press("Escape")
+                else:
+                    print("Botão 'Flash' não encontrado. Presumindo que já está no 'Advanced' ou a UI não o exibe.")
+            except Exception as e:
+                print(f"Não foi necessário ou não foi possível mudar para o Advanced: {e}")
+
         except Exception as e:
+            self.is_logged_in = False
             print("Aviso: Tempo limite para login excedido ou falha ao carregar o chat. Verifique o navegador.")
+
+    async def manual_login(self, profile_name: str):
+        """Abre o Chrome no modo visual e aguarda o fechamento da página."""
+        if self.browser_context:
+            await self.browser_context.close()
+            self.browser_context = None
+            
+        print(f"Iniciando Login Manual para o perfil: {profile_name}...")
+        self.profile_name = profile_name
+        self.user_data_dir = os.path.join(os.getcwd(), self.profile_name)
+        
+        if not self.playwright:
+            self.playwright = await async_playwright().start()
+            
+        # Sempre visual
+        context = await self.playwright.chromium.launch_persistent_context(
+            user_data_dir=self.user_data_dir,
+            headless=False,
+            channel="chrome",
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled"],
+            ignore_default_args=["--enable-automation"]
+        )
+        
+        pages = context.pages
+        page = pages[0] if pages else await context.new_page()
+        
+        print("Navegando para o Gemini para login manual...")
+        await page.goto("https://gemini.google.com/app", wait_until="networkidle")
+        
+        print("Janela de login aberta. Faça o login. Feche a janela quando terminar.")
+        try:
+            # Aguarda a página ser fechada pelo usuário (evento 'close')
+            await page.wait_for_event("close", timeout=0)  # timeout=0 significa aguardar indefinidamente
+        except Exception as e:
+            print(f"A janela foi fechada ou algo ocorreu: {e}")
+            
+        await context.close()
+        print("Login manual concluído e contexto encerrado. O robô está pronto para rodar invisível.")
 
     async def close(self):
         if self.browser_context:
@@ -109,6 +180,13 @@ class GeminiScraper:
         
         for _ in range(max_attempts):
             try:
+                # Verifica se houve limite
+                body_text = await self.page.locator('body').inner_text()
+                body_lower = body_text.lower()
+                if "atingiu o limite" in body_lower or "reached your limit" in body_lower or "excedeu" in body_lower or "limite do gemini" in body_lower:
+                    print("BLOQUEIO DETECTADO: Limite da conta atingido.")
+                    raise LimitReachedException("Limite do Gemini Advanced atingido nesta conta.")
+
                 responses = await self.page.locator('message-content').all_inner_texts()
                 if not responses:
                     # Fallback genérico

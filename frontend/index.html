@@ -26,7 +26,10 @@
                 </div>
 
                 <div class="profile-section">
-                    <h3>Active Profile</h3>
+                    <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                        Active Profile
+                        <span id="login-status-badge" style="font-size: 0.7em; padding: 3px 8px; border-radius: 12px; font-weight: bold; display: none;"></span>
+                    </h3>
                     <div class="select-wrapper">
                         <select id="profile-selector">
                             <option value="loading">Carregando...</option>
@@ -35,7 +38,11 @@
                     
                     <div class="new-profile-box">
                         <input type="text" id="new-profile-name" placeholder="Ex: chrome_profile_canal">
-                        <button id="btn-create-profile" class="btn-primary">Criar / Trocar</button>
+                        <button id="btn-create-profile" class="btn-primary" style="margin-top: 5px;">Criar Novo Perfil</button>
+                    </div>
+                    <div class="delete-profile-box" style="margin-top: 10px;">
+                        <button id="btn-login-profile" class="btn-primary" style="width: 100%; background: #4caf50; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 5px;">Fazer Login (Abrir Chrome)</button>
+                        <button id="btn-delete-profile" class="btn-danger" style="width: 100%; background: #ff4757; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: 600;">Excluir Perfil Selecionado</button>
                     </div>
                     <p class="helper-text">Mudar de perfil reinicia o navegador localmente.</p>
                 </div>
